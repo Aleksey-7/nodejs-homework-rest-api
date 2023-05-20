@@ -1,18 +1,17 @@
-const fs = require('fs/promises');
-const path = require('path');
-const crypto = require('crypto');
+const mongoose = require('mongoose');
+
+const contactSchema = require('../schemas/mongooseSchema');
 const HttpError = require('../utils/httpError');
 
-const contactsPath = path.join(process.cwd(), 'models', 'contacts.json');
+const Contact = mongoose.model('Contact', contactSchema);
 
 const listContactsService = async () => {
-  const contacts = await fs.readFile(contactsPath);
-  return JSON.parse(contacts);
+  const contacts = await Contact.find();
+  return contacts;
 };
 
 const getContactByIdService = async contactId => {
-  const contacts = await listContactsService();
-  const contact = contacts.find(contact => contact.id === contactId);
+  const contact = await Contact.findById(contactId);
   if (!contact) {
     throw new HttpError(404, 'Not found');
   }
@@ -20,21 +19,15 @@ const getContactByIdService = async contactId => {
 };
 
 const removeContactService = async contactId => {
-  const contacts = await listContactsService();
-  const index = contacts.findIndex(contact => contact.id === contactId);
-  if (index === -1) {
+  const removedContact = await Contact.findByIdAndRemove(contactId);
+  if (!removedContact) {
     throw new HttpError(404, 'Not found');
   }
-  contacts.splice(index, 1);
-  await fs.writeFile(contactsPath, JSON.stringify(contacts, null, 2));
   return contactId;
 };
 
 const addContactService = async body => {
-  const contacts = await listContactsService();
-  const newContact = { id: crypto.randomUUID(), ...body };
-  contacts.push(newContact);
-  await fs.writeFile(contactsPath, JSON.stringify(contacts, null, 2));
+  const newContact = Contact.create(body);
   return newContact;
 };
 
@@ -42,17 +35,22 @@ const updateContactService = async (contactId, body) => {
   if (Object.keys(body).length === 0) {
     throw new HttpError(400, 'missing fields');
   }
-  const contacts = await listContactsService();
-  const index = contacts.findIndex(contact => contact.id === contactId);
-  if (index === -1) {
+  const updatedContact = await Contact.findByIdAndUpdate(contactId, body, { new: true });
+  if (!updatedContact) {
     throw new HttpError(404, 'Not found');
   }
-  contacts[index] = {
-    ...contacts[index],
-    ...body,
-  };
-  await fs.writeFile(contactsPath, JSON.stringify(contacts, null, 2));
-  return contacts[index];
+  return updatedContact;
+};
+
+const updateStatusContactService = async (contactId, body) => {
+  if (Object.keys(body).length === 0) {
+    throw new HttpError(400, 'missing field favorite');
+  }
+  const contact = await Contact.findByIdAndUpdate(contactId, body, { new: true });
+  if (!contact) {
+    throw new HttpError(404, 'Not found');
+  }
+  return contact;
 };
 
 module.exports = {
@@ -61,4 +59,5 @@ module.exports = {
   removeContactService,
   addContactService,
   updateContactService,
+  updateStatusContactService,
 };
