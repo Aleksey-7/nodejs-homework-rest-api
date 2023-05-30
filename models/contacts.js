@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const { handelMongooseError } = require('../utils');
 
 const contactSchema = new mongoose.Schema(
   {
@@ -18,8 +19,15 @@ const contactSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
+    owner: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'user',
+      require: true,
+    },
   },
   { versionKey: false, timestamps: true }
 );
 
-module.exports = contactSchema;
+contactSchema.post('save', handelMongooseError);
+
+module.exports = mongoose.model('contact', contactSchema);
