@@ -16,7 +16,7 @@ const loginValidationSchema = Joi.object().keys({
 });
 
 const updateSubscriptionSchema = Joi.object({
-  subscription: Joi.valid('starter', 'pro', 'business'),
+  subscription: Joi.valid('starter', 'pro', 'business').required(),
 });
 
 module.exports = {
